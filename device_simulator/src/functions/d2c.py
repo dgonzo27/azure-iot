@@ -4,7 +4,7 @@ import json
 import uuid
 
 from azure.iot.device.aio import IoTHubDeviceClient
-from azure.iot.device import Message
+from azure.iot.device import Message, MethodResponse
 from structlog import get_logger
 
 from .utils import upload_via_storage_blob
@@ -93,6 +93,45 @@ async def receive_msg(cnx_str: str) -> None:
             logger.info(f"content type:\t{message.content_type}")
         
         client.on_message_received = message_received_handler
+
+        def stdin_listener():
+            while True:
+                selection = input("enter q and return to quit\n")
+                if selection == "Q" or selection == "q":
+                    logger.info("quitting...")
+                    break
+        
+        loop = asyncio.get_running_loop()
+        user_finished = loop.run_in_executor(None, stdin_listener)
+
+        await user_finished
+        await client.shutdown()
+    
+    except Exception as iothub_error:
+        logger.exception(f"exception occurred: {iothub_error}")
+        logger.error("unexpected error from IoT Hub")
+
+
+async def receive_method(cnx_str: str) -> None:
+    """listen for direct method requests from IoT Hub"""
+    try:
+        logger.info("IoT Hub device connecting to client...")
+        client = IoTHubDeviceClient.create_from_connection_string(cnx_str)
+        await client.connect()
+
+        async def method_request_handler(method_request) -> None:
+            if method_request.name == "method1":
+                payload = {"result": True, "data": "some data"}
+                status = 200
+                logger.info("executed method1")
+            else:
+                payload = {"result": False, "data": "unknown method"}
+                status = 400
+                logger.error(f"executed unknown method: {method_request.name}")
+            method_response = MethodResponse.create_from_method_request(method_request, status, payload)
+            await client.send_method_response(method_response)
+
+        client.on_method_request_received = method_request_handler
 
         def stdin_listener():
             while True:

@@ -18,10 +18,10 @@ def cli() -> None:
     pass
 
 
-@cli.command("device_to_cloud", short_help="Simulate an IoT D2C message.")
+@cli.command("device_to_cloud_msg", short_help="Simulate an IoT D2C message.")
 @click.option("--status", prompt="message status", help="error or success")
-def device_to_cloud(status: str) -> None:
-    logger.info(f"device_to_cloud triggered with status: {status}")
+def device_to_cloud_msg(status: str) -> None:
+    logger.info(f"device_to_cloud_msg triggered with status: {status}")
     accepted_statuses = ["error", "success"]
     if status not in accepted_statuses:
         logger.error(f"{status} is not an acceptable status, please use error or success")
@@ -35,11 +35,19 @@ def file_to_cloud() -> None:
     asyncio.run(d2c.upload_file(DEVICE_CNX_STR))
 
 
-@cli.command("cloud_to_device", short_help="Simulate an IoT C2D message.")
+@cli.command("cloud_to_device_method", short_help="Simulate an IoT C2D method.")
+@click.option("--method_name", prompt="method name", help="method1")
+@click.option("--device_id", prompt="device id", help="azure id/name for device")
+def cloud_to_device_method(method_name: str, device_id: str) -> None:
+    logger.info(f"cloud_to_device_method triggered for method: {method_name}")
+    c2d.invoke_method(method_name, device_id, SERVICE_CNX_STR)
+
+
+@cli.command("cloud_to_device_msg", short_help="Simulate an IoT C2D message.")
 @click.option("--status", prompt="message status", help="error or success")
 @click.option("--device_id", prompt="device id", help="azure id/name for device")
-def cloud_to_device(status: str, device_id: str) -> None:
-    logger.info(f"cloud_to_device triggered with status: {status}")
+def cloud_to_device_msg(status: str, device_id: str) -> None:
+    logger.info(f"cloud_to_device_msg triggered with status: {status}")
     accepted_statuses = ["error", "success"]
     if status not in accepted_statuses:
         logger.error(f"{status} is not an acceptable status, please use error or success")
@@ -47,9 +55,15 @@ def cloud_to_device(status: str, device_id: str) -> None:
     c2d.send_msg(status, device_id, SERVICE_CNX_STR)
 
 
-@cli.command("listen_from_cloud", short_help="Simulate a device listener for an IoT C2D message.")
-def listen_from_cloud() -> None:
-    logger.info("listen_from_cloud triggered")
+@cli.command("listen_for_cloud_method", short_help="Simulate a device listener for an IoT C2D method.")
+def listen_for_cloud_method() -> None:
+    logger.info("listen_for_cloud_method triggered")
+    asyncio.run(d2c.receive_method(DEVICE_CNX_STR))
+
+
+@cli.command("listen_for_cloud_msg", short_help="Simulate a device listener for an IoT C2D message.")
+def listen_for_cloud_msg() -> None:
+    logger.info("listen_for_cloud_msg triggered")
     asyncio.run(d2c.receive_msg(DEVICE_CNX_STR))
 
 
